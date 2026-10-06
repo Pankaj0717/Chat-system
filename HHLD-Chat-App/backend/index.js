@@ -24,6 +24,13 @@ const io = new Server(server, {
  });
 
 const userSocketMap = {};
+const isEncryptedMessage = (msg) =>
+  typeof msg?.sender === "string" &&
+  typeof msg?.receiver === "string" &&
+  typeof msg?.ciphertext === "string" &&
+  typeof msg?.iv === "string" &&
+  typeof msg?.senderKey === "string" &&
+  typeof msg?.receiverKey === "string";
 
 io.on('connection', (socket) => {
     const username = socket.handshake.query.username;
@@ -34,32 +41,63 @@ io.on('connection', (socket) => {
 
     const channelName = `chat_${username}`
     subscribe(channelName, (msg) => {
-          console.log('Received message:', msg);
-          socket.emit("chat msg", JSON.parse(msg));
+      try {
+        const encryptedMsg = JSON.parse(msg);
+        if (!isEncryptedMessage(encryptedMsg)) {
+          console.error("Discarded an unencrypted message from Redis");
+          return;
+        }
+        socket.emit("chat msg", encryptedMsg);
+      } catch (error) {
+        console.error("Unable to process Redis message:", error.message);
+      }
     });
 
 
     socket.on('chat msg', (msg) => {
-        console.log(msg.sender);
-        console.log(msg.receiver);
-        console.log(msg.text);
-        console.log(msg);
-        const receiverSocket = userSocketMap[msg.receiver];
-        if(receiverSocket) {
-          //both sender and receiver are connected to same BE
-          receiverSocket.emit('chat msg', msg);
-        } else {
-          // sender and receiver on diff BEs, so we need to use pubsub
-          const channelName = `chat_${msg.receiver}`
-          publish(channelName, JSON.stringify(msg));
+        if (!isEncryptedMessage(msg)) {
+          socket.emit("chat error", { message: "Only encrypted messages are accepted" });
+          return;
         }
 
-        addMsgToConversation([msg.sender, msg.receiver], {
-                  text: msg.text,
-                  sender:msg.sender,
-                  receiver:msg.receiver
-                }
-        )
+        const encryptedMsg = {
+          ciphertext: msg.ciphertext,
+          iv: msg.iv,
+          senderKey: msg.senderKey,
+          receiverKey: msg.receiverKey,
+          sender: msg.sender,
+          receiver: msg.receiver
+        };
+
+        const deliverMessage = async () => {
+          try {
+            await addMsgToConversation(
+              [encryptedMsg.sender, encryptedMsg.receiver],
+              encryptedMsg
+            );
+          } catch (error) {
+            console.error("Unable to store encrypted message:", error.message);
+            socket.emit("chat error", { message: "Message could not be stored" });
+            return;
+          }
+
+          try {
+            const receiverSocket = userSocketMap[encryptedMsg.receiver];
+            if (receiverSocket) {
+              receiverSocket.emit('chat msg', encryptedMsg);
+            } else {
+              const channelName = `chat_${encryptedMsg.receiver}`;
+              await publish(channelName, JSON.stringify(encryptedMsg));
+            }
+          } catch (error) {
+            console.error("Unable to deliver encrypted message:", error.message);
+            socket.emit("chat error", {
+              message: "Message was saved but live delivery failed; it will appear when the receiver reconnects"
+            });
+          }
+        };
+
+        void deliverMessage();
     });
 
 })
@@ -74,4 +112,3 @@ server.listen(port, () => {
   connectToMongoDB();
   console.log(`Server is listening at http://localhost:${port}`);
 });
-

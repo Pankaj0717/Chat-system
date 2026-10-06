@@ -2,6 +2,7 @@ import express from "express"
 import dotenv from "dotenv"
 import authRouter from "./routes/auth.route.js"
 import usersRouter from "./routes/users.route.js"
+import keysRouter from "./routes/keys.route.js";
 import connectToMongoDB from "./db/connectToMongoDB.js";
 import cors from "cors";
 import cookieParser from "cookie-parser";
@@ -20,6 +21,7 @@ app.use(cors({
 
 app.use('/auth', authRouter);
 app.use('/users', usersRouter);
+app.use('/keys', keysRouter);
 
 app.get('/', (req, res) => {
   res.send('Congratulations HHLD Folks!');
@@ -29,4 +31,3 @@ app.listen(PORT, () => {
   connectToMongoDB();
   console.log(`Server is listening at http://localhost:${PORT}`);
 });
-

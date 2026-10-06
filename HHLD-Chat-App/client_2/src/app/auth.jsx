@@ -3,20 +3,21 @@ import axios from "axios";
 import React, { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from "./zustand/useAuthStore";
+import { initializeEncryption } from "./crypto/messages";
 
 const Auth
     = () => {
         const router = useRouter();
         const [username, setUserName] = useState('');
         const [password, setPassword] = useState('');
-        const {authName, updateAuthName} = useAuthStore();
+        const [errorMessage, setErrorMessage] = useState('');
+        const {updateAuthName} = useAuthStore();
 
         const signUpFunc = async (event) => {
             event.preventDefault();
+            setErrorMessage('');
 
             try {
-                console.log(username);
-                console.log(password);
                 const res = await axios.post(`${process.env.NEXT_PUBLIC_BE_HOST}:8081/auth/signup`, {
                     username: username,
                     password: password
@@ -24,20 +25,26 @@ const Auth
                     {
                         withCredentials: true
                     })
-                console.log(res);
                 if (res.data.message === "Username already exists") {
-                    alert('Username already exists');
+                    setErrorMessage('Username already exists');
                 } else {
+                    await initializeEncryption(
+                        username,
+                        password,
+                        `${process.env.NEXT_PUBLIC_BE_HOST}:8081`
+                    );
                     updateAuthName(username);
+                    setPassword('');
                     router.replace('/chat');
                 }
             } catch (error) {
-                console.log("Error in signup function : ", error.message);
+                setErrorMessage(error.response?.data?.message || error.message || 'Unable to sign up. Please try again.');
             }
         }
 
         const loginFunc = async (event) => {
             event.preventDefault();
+            setErrorMessage('');
 
             try {
                 const res = await axios.post(`${process.env.NEXT_PUBLIC_BE_HOST}:8081/auth/login`, {
@@ -47,20 +54,25 @@ const Auth
                     {
                         withCredentials: true
                     })
-                console.log(res);
+                await initializeEncryption(
+                    username,
+                    password,
+                    `${process.env.NEXT_PUBLIC_BE_HOST}:8081`
+                );
                 updateAuthName(username);
+                setPassword('');
                 router.replace('/chat');
             } catch (error) {
-                console.log("Error in signup function : ", error.message);
+                setErrorMessage(error.response?.data?.message || error.message || 'Unable to log in. Please check your details and try again.');
             }
         }
 
 
         return (
             <div>
-                <div class="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
-                    <div class="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
-                        <form class="space-y-6" action="#" method="POST">
+                <div className="flex min-h-full flex-col justify-center px-6 py-12 lg:px-8">
+                    <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+                        <form className="space-y-6" onSubmit={signUpFunc}>
                             <div>
                                 <label for="username" class="block text-sm font-medium leading-6 text-gray-900">Username</label>
                                 <div class="mt-2">
@@ -89,9 +101,13 @@ const Auth
                                 </div>
                             </div>
 
+                            {errorMessage && (
+                                <p className="text-sm text-red-600" role="alert">{errorMessage}</p>
+                            )}
+
                             <div className='flex'>
-                                <button onClick={signUpFunc} type="submit" class="m-3 flex w-1/2 justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Sign Up</button>
-                                <button onClick={loginFunc} type="submit" class="m-3 flex w-1/2 justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Login</button>
+                                <button type="submit" class="m-3 flex w-1/2 justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Sign Up</button>
+                                <button onClick={loginFunc} type="button" class="m-3 flex w-1/2 justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600">Login</button>
                             </div>
                         </form>
 

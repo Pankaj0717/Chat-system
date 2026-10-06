@@ -9,6 +9,12 @@ const userSchema = mongoose.Schema({
     password: {
         type: String,
         required: true
+    },
+    publicKey: {
+        type: mongoose.Schema.Types.Mixed
+    },
+    encryptedPrivateKey: {
+        type: mongoose.Schema.Types.Mixed
     }
 })
 

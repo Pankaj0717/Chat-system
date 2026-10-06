@@ -2,8 +2,19 @@ import mongoose from "mongoose";
 
 const msgSchema = mongoose.Schema({
     text: {
-        type: String,
-        required: true
+        type: String
+    },
+    ciphertext: {
+        type: String
+    },
+    iv: {
+        type: String
+    },
+    senderKey: {
+        type: String
+    },
+    receiverKey: {
+        type: String
     },
     sender: {
         type: String,

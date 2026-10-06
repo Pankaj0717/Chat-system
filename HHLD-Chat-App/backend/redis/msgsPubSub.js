@@ -3,23 +3,34 @@ dotenv.config()
 
 import Redis from 'ioredis'
 
-// Create a Redis instance for subscribing
-const subscriber = new Redis({
-  host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT,
-  password: process.env.REDIS_PWD,
-  username: process.env.REDIS_USER,
-  tls: {}
+const redisPort = process.env.REDIS_PORT
+  ? Number(process.env.REDIS_PORT)
+  : 6379;
+const redisTlsSetting = process.env.REDIS_TLS?.toLowerCase();
+
+if (!Number.isInteger(redisPort) || redisPort < 1 || redisPort > 65535) {
+  throw new Error('REDIS_PORT must be a valid TCP port');
+}
+if (redisTlsSetting && !['true', 'false'].includes(redisTlsSetting)) {
+  throw new Error('REDIS_TLS must be either "true" or "false"');
+}
+
+const redisOptions = {
+  host: process.env.REDIS_HOST || '127.0.0.1',
+  port: redisPort,
+  ...(process.env.REDIS_PWD ? { password: process.env.REDIS_PWD } : {}),
+  ...(process.env.REDIS_USER ? { username: process.env.REDIS_USER } : {}),
+  ...(redisTlsSetting === 'false' ? {} : { tls: {} })
+};
+
+const subscriber = new Redis(redisOptions);
+const publisher = new Redis(redisOptions);
+
+subscriber.on('error', (error) => {
+  console.error('Redis subscriber error:', error.message);
 });
-
-
-// Create a Redis instance for publishing
-const publisher = new Redis({
-  host: process.env.REDIS_HOST,
-  port: process.env.REDIS_PORT,
-  password: process.env.REDIS_PWD,
-  username: process.env.REDIS_USER,
-  tls: {}
+publisher.on('error', (error) => {
+  console.error('Redis publisher error:', error.message);
 });
 
 // When a message is published to a specific channel, 
@@ -44,7 +55,6 @@ export function subscribe(channel, callback) {
   // calls the provided callback function with the received message
 
   subscriber.on('message', (subscribedChannel, message) => {
-    console.log('Subscriber ', subscribedChannel, ' has received msg ', message);
     if (subscribedChannel === channel) {
       callback(message);
     }
@@ -68,8 +78,8 @@ export function unsubscribe(channel) {
 export async function publish(channel, message) {
   try {
     await publisher.publish(channel, message);
-    console.log(`Published message to ${channel}: ${message}`);
   } catch (error) {
     console.error('Error publishing message:', error);
+    throw error;
   }
 }
