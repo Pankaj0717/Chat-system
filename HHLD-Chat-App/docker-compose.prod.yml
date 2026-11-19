@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  backend:
+    image: gaonkarpankaj/chat-backend:latest
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  auth-backend:
+    image: gaonkarpankaj/chat-auth-backend:lts
+    ports:
+      - "8081:8081"
+    env_file:
+      - .env
+    restart: unless-stopped
+
+  frontend:
+    image: gaonkarpankaj/chat-client:lts
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: unless-stopped

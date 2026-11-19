@@ -12,6 +12,8 @@ import { decryptMessage, encryptMessage, getPublicKey } from '../crypto/messages
 
 const Chat = () => {
    const router = useRouter();
+
+   // const [msgs, setMsgs] = useState([]);
    const [msg, setMsg] = useState('');
    const [socket, setSocket] = useState(null);
    const {authName, updateAuthName} = useAuthStore();
@@ -22,6 +24,30 @@ const Chat = () => {
    const [isLoggingOut, setIsLoggingOut] = useState(false);
    const [isSessionReady, setIsSessionReady] = useState(false);
 
+   const logout = async () => {
+       setIsLoggingOut(true);
+       try {
+           await axios.post(
+               `${process.env.NEXT_PUBLIC_BE_HOST}:8081/auth/logout`,
+               {},
+               { withCredentials: true }
+           );
+           sessionStorage.removeItem('chat-private-key');
+           sessionStorage.removeItem('chat-public-key');
+           sessionStorage.removeItem('chat-encryption-user');
+           sessionStorage.removeItem('chat-selected-receiver');
+           sessionStorage.removeItem('chat-selected-receiver-user');
+           updateAuthName('');
+           updateUsers([]);
+           updateChatReceiver('');
+           updateChatMsgs([]);
+           router.replace('/');
+       } catch (error) {
+           setMessageError(error.response?.data?.message || 'Unable to log out. Please try again.');
+           setIsLoggingOut(false);
+       }
+   };
+
    useEffect(() => {
        let cancelled = false;
        const restoreSession = async () => {
@@ -31,6 +57,7 @@ const Chat = () => {
                router.replace('/');
                return;
            }
+
            try {
                const res = await axios.get(
                    `${process.env.NEXT_PUBLIC_BE_HOST}:8081/auth/me`,
@@ -50,6 +77,7 @@ const Chat = () => {
                }
            }
        };
+
        restoreSession();
        return () => {
            cancelled = true;
@@ -82,9 +110,12 @@ const Chat = () => {
            return;
        }
        const newSocket = io(`${process.env.NEXT_PUBLIC_BE_HOST}:8084`, {
-           query: { username: authName }
+            query: {
+               username: authName
+           }
        });
        setSocket(newSocket);
+
        newSocket.on('chat msg', async encryptedMsg => {
            try {
                if (typeof encryptedMsg?.ciphertext !== 'string') {
@@ -95,7 +126,10 @@ const Chat = () => {
                    throw new Error('Encryption keys are not available for this session');
                }
                const decryptedMsg = await decryptMessage(encryptedMsg, authName, privateKey);
-               updateChatMsgs([...useChatMsgsStore.getState().chatMsgs, decryptedMsg]);
+               updateChatMsgs([
+                   ...useChatMsgsStore.getState().chatMsgs,
+                   decryptedMsg
+               ]);
                setMessageError('');
            } catch (error) {
                setMessageError(error.message || 'Unable to decrypt this message');
@@ -104,11 +138,12 @@ const Chat = () => {
        newSocket.on('chat error', error => {
            setMessageError(error.message || 'The message could not be sent');
        });
+
        return () => newSocket.close();
    }, [authName, isSessionReady, updateChatMsgs]);
 
-   const sendMsg = async (event) => {
-       event.preventDefault();
+   const sendMsg = async (e) => {
+       e.preventDefault();
        if (!socket || !chatReceiver) {
            return;
        }
@@ -139,88 +174,63 @@ const Chat = () => {
        } catch (error) {
            setMessageError(error.message || 'Unable to encrypt or send this message');
        }
-   };
-
-   const logout = async () => {
-       setIsLoggingOut(true);
-       try {
-           await axios.post(
-               `${process.env.NEXT_PUBLIC_BE_HOST}:8081/auth/logout`,
-               {},
-               { withCredentials: true }
-           );
-           sessionStorage.removeItem('chat-private-key');
-           sessionStorage.removeItem('chat-public-key');
-           sessionStorage.removeItem('chat-encryption-user');
-           sessionStorage.removeItem('chat-selected-receiver');
-           sessionStorage.removeItem('chat-selected-receiver-user');
-           updateAuthName('');
-           updateUsers([]);
-           updateChatReceiver('');
-           updateChatMsgs([]);
-           router.replace('/');
-       } catch (error) {
-           setMessageError(error.response?.data?.message || 'Unable to log out. Please try again.');
-           setIsLoggingOut(false);
-       }
-   };
+   }
 
    if (!isSessionReady) {
        return <div className="p-6">Restoring your chat session...</div>;
    }
+ 
+ return (
+    <div className='h-screen flex divide-x-4'>
+        <div className='w-1/5 '>
+            <ChatUsers/>
+        </div>
+        <div className='w-4/5 flex flex-col'>
+            <div className='1/5'>
+                <div className="flex items-center justify-between p-4">
+                    <h1>{authName} is chatting with {chatReceiver}</h1>
+                    <button
+                        type="button"
+                        onClick={logout}
+                        disabled={isLoggingOut}
+                        className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                        {isLoggingOut ? 'Logging out...' : 'Log out'}
+                    </button>
+                </div>
+            </div>
+            <div className='msgs-container h-3/5 overflow-scroll'>
+                {chatMsgs.filter((message) =>
+                    message.sender === chatReceiver || message.receiver === chatReceiver
+                ).map((msg, index) => (
+                    <div key={index} className={`m-3 p-1 ${msg.sender === authName ? 'text-right' : 'text-left'}`}>
+                        <span className={`p-2 rounded-2xl ${msg.sender === authName ? 'bg-blue-200' : 'bg-green-200'}`}>
+                        {msg.text}
+                        </span>
+                    </div>
+                ))}
+            </div>
+            <div className='h-1/5 flex items-center justify-center'>
+                {messageError && <p className="text-sm text-red-600" role="alert">{messageError}</p>}
+                <form onSubmit={sendMsg} className="w-1/2">
+                    <div className="relative">
+                        <input type="text"
+                                value={msg}
+                                onChange={(e) => setMsg(e.target.value)}
+                                placeholder="Type your text here"
+                                required
+                                className="block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500"  />
+                        <button type="submit"
+                                className="text-white absolute end-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+                                Send
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+   </div>
+ )
+}
 
-   return (
-       <div className='h-screen flex divide-x-4'>
-           <div className='w-1/5'><ChatUsers/></div>
-           <div className='w-4/5 flex flex-col'>
-               <div className='1/5'>
-                   <div className="flex items-center justify-between p-4">
-                       <h1>{authName} is chatting with {chatReceiver}</h1>
-                       <button
-                           type="button"
-                           onClick={logout}
-                           disabled={isLoggingOut}
-                           className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-60"
-                       >
-                           {isLoggingOut ? 'Logging out...' : 'Log out'}
-                       </button>
-                   </div>
-               </div>
-               <div className='msgs-container h-3/5 overflow-scroll'>
-                   {chatMsgs.filter((message) =>
-                       message.sender === chatReceiver || message.receiver === chatReceiver
-                   ).map((message, index) => (
-                       <div key={index} className={`m-3 p-1 ${message.sender === authName ? 'text-right' : 'text-left'}`}>
-                           <span className={`p-2 rounded-2xl ${message.sender === authName ? 'bg-blue-200' : 'bg-green-200'}`}>
-                               {message.text}
-                           </span>
-                       </div>
-                   ))}
-               </div>
-               <div className='h-1/5 flex items-center justify-center'>
-                   {messageError && <p className="text-sm text-red-600" role="alert">{messageError}</p>}
-                   <form onSubmit={sendMsg} className="w-1/2">
-                       <div className="relative">
-                           <input
-                               type="text"
-                               value={msg}
-                               onChange={(event) => setMsg(event.target.value)}
-                               placeholder="Type your text here"
-                               required
-                               className="block w-full p-4 ps-10 text-sm text-gray-900 border border-gray-300 rounded-lg bg-gray-50 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white"
-                           />
-                           <button
-                               type="submit"
-                               className="text-white absolute end-2.5 bottom-2.5 bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 font-medium rounded-lg text-sm px-4 py-2 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800"
-                           >
-                               Send
-                           </button>
-                       </div>
-                   </form>
-               </div>
-           </div>
-       </div>
-   );
-};
 
-export default Chat;
+export default Chat

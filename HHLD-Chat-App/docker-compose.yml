@@ -2,7 +2,7 @@ version: '3.8'
 
 services:
  backend:
-   image: educosys/chat-backend:latest
+   image: gaonkarpankaj/chat-backend:latest
    build:
      context: ./backend # Path to the backend Dockerfile
    ports:
@@ -10,7 +10,7 @@ services:
 
 
  backend2:
-   image: educosys/chat-backend2:lts
+   image: gaonkarpankaj/chat-backend2:lts
    build:
      context: ./backend # Path to the backend Dockerfile
    ports:
@@ -18,7 +18,7 @@ services:
 
 
  auth-backend:
-   image: educosys/chat-auth-backend:lts
+   image: gaonkarpankaj/chat-auth-backend:lts
    build:
      context: ./auth-backend # Path to the auth backend Dockerfile
    ports:
@@ -26,7 +26,7 @@ services:
 
 
  frontend:
-   image: educosys/chat-client:lts
+   image: gaonkarpankaj/chat-client:lts
    build:
      context: ./client # Path to the frontend Dockerfile
    ports:
@@ -36,7 +36,7 @@ services:
 
 
  frontend2:
-   image: educosys/chat-client2:lts
+   image: gaonkarpankaj/chat-client2:lts
    build:
      context: ./client_2 # Path to the frontend Dockerfile
    ports:
