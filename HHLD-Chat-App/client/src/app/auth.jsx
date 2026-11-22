@@ -18,7 +18,7 @@ const Auth
             setErrorMessage('');
 
             try {
-                const res = await axios.post(`${process.env.NEXT_PUBLIC_BE_HOST}:8081/auth/signup`, {
+                const res = await axios.post(`${process.env.NEXT_PUBLIC_AUTH_URL}/auth/signup`, {
                     username: username,
                     password: password
                 },
@@ -31,7 +31,7 @@ const Auth
                     await initializeEncryption(
                         username,
                         password,
-                        `${process.env.NEXT_PUBLIC_BE_HOST}:8081`
+                        process.env.NEXT_PUBLIC_AUTH_URL
                     );
                     updateAuthName(username);
                     setPassword('');
@@ -46,7 +46,7 @@ const Auth
             setErrorMessage('');
 
             try {
-                const res = await axios.post(`${process.env.NEXT_PUBLIC_BE_HOST}:8081/auth/login`, {
+                const res = await axios.post(`${process.env.NEXT_PUBLIC_AUTH_URL}/auth/login`, {
                     username: username,
                     password: password
                 },
@@ -56,7 +56,7 @@ const Auth
                 await initializeEncryption(
                     username,
                     password,
-                    `${process.env.NEXT_PUBLIC_BE_HOST}:8081`
+                    process.env.NEXT_PUBLIC_AUTH_URL
                 );
                 updateAuthName(username);
                 setPassword('');

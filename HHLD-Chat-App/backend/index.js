@@ -14,12 +14,14 @@ dotenv.config();
 const port = process.env.PORT || 5000;
 
 const app = express();
-app.use(cors());
+app.use(cors({
+    origin: ["https://app.35-174-198-179.nip.io"]
+}));
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
         allowedHeaders: ["*"],
-        origin: "*"
+        origin: ["https://app.35-174-198-179.nip.io"]
       }
  });
 

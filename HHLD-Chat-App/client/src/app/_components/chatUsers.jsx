@@ -43,7 +43,7 @@ const ChatUsers = () => {
         updateChatMsgs([]);
         const getMsgs = async () => {
           try {
-            const res = await axios.get(`${process.env.NEXT_PUBLIC_BE_HOST}:8080/msgs`,
+            const res = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/msgs`,
                 {
                     params: {
                         'sender': authName,

@@ -28,7 +28,7 @@ const Chat = () => {
        setIsLoggingOut(true);
        try {
            await axios.post(
-               `${process.env.NEXT_PUBLIC_BE_HOST}:8081/auth/logout`,
+               `${process.env.NEXT_PUBLIC_AUTH_URL}/auth/logout`,
                {},
                { withCredentials: true }
            );
@@ -60,7 +60,7 @@ const Chat = () => {
 
            try {
                const res = await axios.get(
-                   `${process.env.NEXT_PUBLIC_BE_HOST}:8081/auth/me`,
+                   `${process.env.NEXT_PUBLIC_AUTH_URL}/auth/me`,
                    { withCredentials: true }
                );
                if (res.data.username !== savedUsername) {
@@ -89,7 +89,7 @@ const Chat = () => {
            return;
        }
        let cancelled = false;
-       axios.get(`${process.env.NEXT_PUBLIC_BE_HOST}:8081/users`, {
+       axios.get(`${process.env.NEXT_PUBLIC_AUTH_URL}/users`, {
            withCredentials: true
        }).then((res) => {
            if (!cancelled) {
@@ -109,7 +109,7 @@ const Chat = () => {
        if (!isSessionReady || !authName) {
            return;
        }
-       const newSocket = io(`${process.env.NEXT_PUBLIC_BE_HOST}:8080`, {
+       const newSocket = io(process.env.NEXT_PUBLIC_API_URL, {
             query: {
                username: authName
            }
@@ -155,7 +155,7 @@ const Chat = () => {
            }
            const recipientPublicKey = await getPublicKey(
                chatReceiver,
-               `${process.env.NEXT_PUBLIC_BE_HOST}:8081`
+               process.env.NEXT_PUBLIC_AUTH_URL
            );
            const encryptedMsg = await encryptMessage(
                msg,
