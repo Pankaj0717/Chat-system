@@ -4,6 +4,12 @@ FROM --platform=linux/amd64 node:lts-alpine3.19
 # Set the working directory inside the container
 WORKDIR /app
 
+# Public Next.js variables are embedded during the build.
+ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_AUTH_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_AUTH_URL=$NEXT_PUBLIC_AUTH_URL
+
 # Copy all files from the current directory to the /app directory in the container
 COPY . /app
 

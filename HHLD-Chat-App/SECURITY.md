@@ -21,4 +21,4 @@ This protects against passive database/Redis readers. It does not protect
 against a malicious or compromised auth server that substitutes public keys
 or serves hostile client code. Verify users' key fingerprints out-of-band
 when protection against server-side impersonation is required.
-heyy
+h
