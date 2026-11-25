@@ -188,7 +188,7 @@ const Chat = () => {
         <div className='w-4/5 flex flex-col'>
             <div className='1/5'>
                 <div className="flex items-center justify-between p-4">
-                    <h1>{authName} is chatting with {chatReceiver}</h1>
+                    <h1>{authName} is texting {chatReceiver}</h1>
                     <button
                         type="button"
                         onClick={logout}
