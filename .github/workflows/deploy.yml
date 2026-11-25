@@ -36,6 +36,9 @@ jobs:
         with:
           context: ./HHLD-Chat-App/client
           push: true
+          build-args: |
+            NEXT_PUBLIC_API_URL=https://api.35-174-198-179.nip.io
+            NEXT_PUBLIC_AUTH_URL=https://auth.35-174-198-179.nip.io
           tags: ${{ secrets.DOCKERHUB_USERNAME }}/chat-client:lts
 
   deploy:
